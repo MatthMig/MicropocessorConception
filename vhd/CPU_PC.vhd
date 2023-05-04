@@ -44,7 +44,9 @@ architecture RTL of CPU_PC is
         S_SRAI,
         S_SLLI,
         S_SRLI,
-        S_AUIPC
+        S_AUIPC,
+        S_SLT,
+        S_BEQ
     );
 
     signal state_d, state_q : State_type;
@@ -214,6 +216,11 @@ begin
                                 cmd.PC_sel <= PC_from_pc;
                                 cmd.PC_we <= '1';
                                 state_d <= S_SLL;
+                            when "010" => -- SLT
+                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                cmd.PC_sel <= PC_from_pc;
+                                cmd.PC_we <= '1';
+                                state_d <= S_SLT;
                             when "100" => --XOR
                                 cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
                                 cmd.PC_sel <= PC_from_pc;
@@ -247,6 +254,16 @@ begin
                             when others => -- Erreur
                                 state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                         end case;
+                    
+                    when "1100011" => --B
+                        case status.IR(14 downto 12) is
+                            when "000" => --beq
+                                state_d <= S_BEQ;
+                            when others => -- Erreur
+                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                    end case;
+
+
                     when others => -- Erreur
                         state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                 end case;
@@ -395,6 +412,18 @@ begin
                 -- next state
                 state_d <= S_Fetch;
 
+            when S_SLT =>
+                -- rd <- rs1 comp rs2
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_slt;
+                -- lecture mem[PC]
+                cmd.ADDR_sel <= ADDR_from_pc;
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '0';
+                -- next state
+                state_d <= S_Fetch;
+
             when S_SLL =>
                 -- rd <- rs1 shift de rs2
                 cmd.SHIFTER_Y_sel <= SHIFTER_Y_rs2;
@@ -474,7 +503,24 @@ begin
                 state_d <= S_Fetch;
                 
 ---------- Instructions de saut ----------
-
+            when S_BEQ =>
+                -- rd <- slt(rs1,rs2)
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                cmd.DATA_sel <= DATA_from_slt;
+                cmd.RF_we <= '1';
+                -- vérification status.JCOND
+                if status.JCOND then
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_immB;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                else 
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                end if;
+                -- next state
+                state_d <= S_Pre_Fetch;
+                
 ---------- Instructions de chargement à partir de la mémoire ----------
 
 ---------- Instructions de sauvegarde en mémoire ----------
