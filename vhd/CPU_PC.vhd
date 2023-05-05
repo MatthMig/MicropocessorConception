@@ -460,6 +460,8 @@ begin
             when S_SLTU =>
                 -- rd <- rs1 comp rs2
                 cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_slt;
                 -- lecture mem[PC]
                 cmd.ADDR_sel <= ADDR_from_pc;
                 cmd.mem_ce <= '1';
