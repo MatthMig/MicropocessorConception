@@ -46,7 +46,15 @@ architecture RTL of CPU_PC is
         S_SRLI,
         S_AUIPC,
         S_SLT,
-        S_BEQ
+        S_BEQ,
+        S_BNE,
+        S_BLT,
+        S_BGE,
+        S_BLTU,
+        S_BGEU,
+        S_SLTU,
+        S_SLTI,
+        S_SLTIU
     );
 
     signal state_d, state_q : State_type;
@@ -190,6 +198,18 @@ begin
                                 cmd.PC_sel <= PC_from_pc;
                                 cmd.PC_we <= '1';
                                 state_d <= S_ANDI;
+                                                     
+                            when "010" => -- SLTI
+                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                cmd.PC_sel <= PC_from_pc;
+                                cmd.PC_we <= '1';
+                                state_d <= S_SLTI;
+                                                     
+                            when "011" => -- SLTIU
+                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                cmd.PC_sel <= PC_from_pc;
+                                cmd.PC_we <= '1';
+                                state_d <= S_SLTIU;
                             when others => -- Erreur
                                 state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                         end case;
@@ -221,6 +241,11 @@ begin
                                 cmd.PC_sel <= PC_from_pc;
                                 cmd.PC_we <= '1';
                                 state_d <= S_SLT;
+                            when "011" => -- SLTU
+                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                cmd.PC_sel <= PC_from_pc;
+                                cmd.PC_we <= '1';
+                                state_d <= S_SLTU;   
                             when "100" => --XOR
                                 cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
                                 cmd.PC_sel <= PC_from_pc;
@@ -259,11 +284,19 @@ begin
                         case status.IR(14 downto 12) is
                             when "000" => --beq
                                 state_d <= S_BEQ;
+                            when "001" => --bne
+                                state_d <= S_BNE;                            
+                            when "100" => --blt
+                                state_d <= S_BLT;
+                            when "101" => --bge
+                                state_d <= S_BGE;
+                            when "110" => --bltu
+                                state_d <= S_BLTU;
+                            when "111" => --bgeu
+                                state_d <= S_BGEU;
                             when others => -- Erreur
                                 state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                    end case;
-
-
+                        end case;
                     when others => -- Erreur
                         state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                 end case;
@@ -412,6 +445,40 @@ begin
                 -- next state
                 state_d <= S_Fetch;
 
+            when S_SLTI =>
+                -- rd <- rs1 comp rs2
+                cmd.ALU_Y_sel <= ALU_Y_immI;
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_slt;
+                -- lecture mem[PC]
+                cmd.ADDR_sel <= ADDR_from_pc;
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '0';
+                -- next state
+                state_d <= S_Fetch;
+            
+            when S_SLTU =>
+                -- rd <- rs1 comp rs2
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                -- lecture mem[PC]
+                cmd.ADDR_sel <= ADDR_from_pc;
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '0';
+                -- next state
+                state_d <= S_Fetch;
+
+            when S_SLTIU =>
+                -- rd <- rs1 comp rs2
+                cmd.ALU_Y_sel <= ALU_Y_immI;
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_slt;
+                -- lecture mem[PC]
+                cmd.ADDR_sel <= ADDR_from_pc;
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '0';
+                -- next state
+                state_d <= S_Fetch;
+
             when S_SLT =>
                 -- rd <- rs1 comp rs2
                 cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
@@ -506,8 +573,6 @@ begin
             when S_BEQ =>
                 -- rd <- slt(rs1,rs2)
                 cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
-                cmd.DATA_sel <= DATA_from_slt;
-                cmd.RF_we <= '1';
                 -- vérification status.JCOND
                 if status.JCOND then
                     cmd.TO_PC_Y_sel <= TO_PC_Y_immB;
@@ -520,6 +585,90 @@ begin
                 end if;
                 -- next state
                 state_d <= S_Pre_Fetch;
+
+            when S_BNE =>
+                -- rd <- slt(rs1,rs2)
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                -- vérification status.JCOND
+                if status.JCOND then
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_immB;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                else 
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                end if;
+                -- next state
+                state_d <= S_Pre_Fetch;
+
+            when S_BLT =>
+                -- rd <- slt(rs1,rs2)
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                -- vérification status.JCOND
+                if status.JCOND then
+                    cmd.RF_we <= '1';
+                    cmd.DATA_sel <= DATA_from_slt;
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_immB;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                else 
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                end if;
+                -- next state
+                state_d <= S_Pre_Fetch;
+
+            when S_BGE =>
+                -- rd <- slt(rs1,rs2)
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                -- vérification status.JCOND
+                if status.JCOND then
+                    cmd.RF_we <= '1';
+                    cmd.DATA_sel <= DATA_from_slt;
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_immB;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                else 
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                end if;
+                -- next state
+                state_d <= S_Pre_Fetch;         
+
+            when S_BGEU =>
+                -- rd <- slt(rs1,rs2)
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                -- vérification status.JCOND
+                if status.JCOND then
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_immB;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                else 
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                end if;
+                -- next state
+                state_d <= S_Pre_Fetch;
+
+            when S_BLTU =>
+                -- rd <- slt(rs1,rs2)
+                cmd.ALU_Y_sel <= ALU_Y_rf_rs2;
+                -- vérification status.JCOND
+                if status.JCOND then
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_immB;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                else 
+                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                    cmd.PC_sel <= PC_from_pc;
+                    cmd.PC_we <= '1';
+                end if;
+                -- next state
+                state_d <= S_Pre_Fetch;                
                 
 ---------- Instructions de chargement à partir de la mémoire ----------
 
