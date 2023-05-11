@@ -1,8 +1,8 @@
 # TAG = jal
     .text
     lui x31, 0x0
-    jal x1, test_jal_lui #registre 1 = registre 31 suivant
-    ori x31, x0, 0x01 #registre 31 = 00000004
+    jal x1, test_jal_lui # registre 1 = registre 31 suivant
+    ori x31, x0, 0x01 # registre 31 = 00000004
     
 
     test_jal_lui:     

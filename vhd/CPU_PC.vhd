@@ -55,18 +55,13 @@ architecture RTL of CPU_PC is
         S_SLTU,
         S_SLTI,
         S_SLTIU,
-        S_LW,
-        S_LW2,
-        S_LW3,
-        S_SW,
-        S_SW2,
-        S_LB,
-        S_LB2,
-        S_LB3,
-        S_LBU,
-        S_LBU2,
-        S_LBU3,
-        S_JAL
+        S_L,
+        S_L2,
+        S_L3,
+        S_S,
+        S_S2,
+        S_JAL,
+        S_JALR
     );
 
     signal state_d, state_q : State_type;
@@ -309,24 +304,14 @@ begin
                         end case;
 
                     when "0000011" => -- I
-                        case status.IR(14 downto 12) is
-                            when "000" => --lb
-                                state_d <= S_LB;
-                            when "010" => --lw
-                                state_d <= S_LW;
-                            when others => -- Erreur
-                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                        end case;  
+                        state_d <= S_L;
                         
                     when "0100011" => -- S
-                        case status.IR(14 downto 12) is
-                            when "010" => --sw
-                                state_d <= S_SW;
-                            when others => -- Erreur
-                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                        end case;
+                        state_d <= S_S;
                     when "1101111" => --JAL
                         state_d <= S_JAL;
+                    when "1100111" => --JALR
+                        state_d <= S_JALR;
                     when others => -- Erreur
                         state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                 end case;
@@ -600,87 +585,7 @@ begin
                 cmd.mem_we <= '0';
                 -- next state
                 state_d <= S_Fetch;
-
-            when S_JAL =>
-                --rd
-                cmd.PC_X_sel <= PC_X_cst_x00;
-                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                cmd.RF_we <= '1';
-                cmd.DATA_sel <= DATA_from_pc;
-
-                -- saut       
-                cmd.TO_PC_Y_sel <=  TO_PC_Y_immJ;
-                cmd.PC_sel <= PC_from_pc;
-                cmd.PC_we <= '1';
-
-                state_d <= S_Pre_Fetch;
-
-            when S_LW =>
-                -- AD <- rs1 + immI
-                cmd.AD_we <= '1';
-                cmd.AD_Y_sel <= AD_Y_immI;
-                state_d <= S_LW2;
-
-            when S_LW2 =>
-                -- load address to memory
-                cmd.mem_ce <= '1';
-                cmd.ADDR_sel <= ADDR_from_ad;
-                state_d <= S_LW3;
-
-            when S_LW3 =>
-                -- load word from memory
-                cmd.RF_SIZE_sel <= RF_SIZE_word;
-                cmd.RF_sign_enable <= '1';
-                cmd.RF_we <= '1';
-                cmd.DATA_sel <= DATA_from_mem;
-                -- lecture mem[PC]
-                cmd.ADDR_sel <= ADDR_from_pc;
-                cmd.mem_ce <= '1';
-                cmd.mem_we <= '0';
-                -- next state
-                state_d <= S_Fetch;
-
-            when S_LB =>
-                -- AD <- rs1 + immI
-                cmd.AD_we <= '1';
-                cmd.AD_Y_sel <= AD_Y_immI;
-                state_d <= S_LB2;
-
-            when S_LB2 =>
-                -- load address to memory
-                cmd.mem_ce <= '1';
-                cmd.ADDR_sel <= ADDR_from_ad;
-                state_d <= S_LB3;
-
-            when S_LB3 =>
-                -- load word from memory
-                cmd.RF_SIZE_sel <= RF_SIZE_byte;
-                cmd.RF_sign_enable <= '1';
-                cmd.RF_we <= '1';
-                cmd.DATA_sel <= DATA_from_mem;
-                -- lecture mem[PC]
-                cmd.ADDR_sel <= ADDR_from_pc;
-                cmd.mem_ce <= '1';
-                cmd.mem_we <= '0';
-                -- next state
-                state_d <= S_Fetch;
-                
-
-            when S_SW =>
-                -- AD <- rs1 + immS
-                cmd.AD_we <= '1';
-                cmd.AD_Y_sel <= AD_Y_immS;
-                state_d <= S_SW2;
-
-            when S_SW2 =>
-                -- write rs2 in memory to address
-                cmd.RF_SIZE_sel <= RF_SIZE_word;
-                cmd.mem_we <= '1';
-                cmd.mem_ce <= '1';
-                cmd.ADDR_sel <= ADDR_from_ad;
-                -- next state
-                state_d <= S_Pre_Fetch;   
-                
+                                
 ---------- Instructions de saut ----------
             when S_BEQ =>
                 -- rd <- slt(rs1,rs2)
@@ -780,11 +685,110 @@ begin
                     cmd.PC_we <= '1';
                 end if;
                 -- next state
-                state_d <= S_Pre_Fetch;                
+                state_d <= S_Pre_Fetch; 
+                
+            when S_JAL =>
+                -- rd ← pc + 4, cst
+                cmd.PC_Y_sel <= PC_Y_cst_x04;
+                cmd.PC_X_sel <= PC_X_pc;
+                cmd.DATA_sel <= DATA_from_pc;
+                cmd.RF_we <= '1';
+                cmd.TO_PC_Y_sel <= TO_PC_Y_immJ;
+                cmd.PC_sel <= PC_from_pc;
+                cmd.PC_we <= '1';
+                -- next state
+                state_d <= S_Pre_Fetch;
+                
+            when S_JALR =>
+                -- rd ← pc + 4, pc ← (rs1 + (IR2031 ∥ IR31...20))31...1 ∥ 0
+                cmd.PC_Y_sel <= PC_Y_cst_x04;
+                CMD.PC_X_sel <= PC_X_pc;
+                cmd.DATA_sel <= DATA_from_pc;
+                cmd.RF_we <= '1';
+                cmd.ALU_Y_sel <= ALU_Y_immI;
+                cmd.ALU_op <= ALU_plus;
+                cmd.PC_sel <= PC_from_alu;
+                cmd.PC_we <= '1';
+                -- next state
+                state_d <= S_Pre_Fetch;
                 
 ---------- Instructions de chargement à partir de la mémoire ----------
 
+            when S_L =>
+                -- AD <- rs1 + immI
+                cmd.AD_we <= '1';
+                cmd.AD_Y_sel <= AD_Y_immI;
+                state_d <= S_L2;
+
+            when S_L2 =>
+                -- load address to memory
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '0';
+                cmd.ADDR_sel <= ADDR_from_ad;
+                state_d <= S_L3;
+
+            when S_L3 =>
+                -- load word from memory
+                case status.IR(14 downto 12) is 
+                    when "000" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_byte;
+                        cmd.RF_we <= '1';
+                        cmd.DATA_sel <= DATA_from_mem;
+                        cmd.RF_sign_enable <= '1';
+                    when "001" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_half;
+                        cmd.RF_we <= '1';
+                        cmd.DATA_sel <= DATA_from_mem;
+                        cmd.RF_sign_enable <= '1';
+                    when "010" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_word;
+                        cmd.RF_we <= '1';
+                        cmd.DATA_sel <= DATA_from_mem;
+                        cmd.RF_sign_enable <= '1';
+                    when "100" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_byte;
+                        cmd.RF_we <= '1';
+                        cmd.DATA_sel <= DATA_from_mem;
+                        cmd.RF_sign_enable <= '0';
+                    when "101" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_half;
+                        cmd.RF_we <= '1';
+                        cmd.DATA_sel <= DATA_from_mem;
+                        cmd.RF_sign_enable <= '0';
+                end case;
+                -- incrementation de pc
+                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                cmd.PC_sel <= PC_from_pc;
+                cmd.PC_we <= '1';
+                -- next state
+                state_d <= S_Pre_Fetch;    
+
 ---------- Instructions de sauvegarde en mémoire ----------
+            when S_S =>
+                -- AD <- rs1 + immS
+                cmd.AD_we <= '1';
+                cmd.AD_Y_sel <= AD_Y_immS;
+                state_d <= S_S2;
+
+            when S_S2 =>
+                -- write rs2 in memory to address
+                case status.IR(14 downto 12) is 
+                    when "000" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_byte;
+                    when "001" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_half;
+                    when "010" =>
+                        cmd.RF_SIZE_sel <= RF_SIZE_word;
+                end case;
+                cmd.mem_we <= '1';
+                cmd.mem_ce <= '1';
+                cmd.ADDR_sel <= ADDR_from_ad;
+                -- incrementation de pc
+                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                cmd.PC_sel <= PC_from_pc;
+                cmd.PC_we <= '1';
+                -- next state
+                state_d <= S_Pre_Fetch;   
 
 ---------- Instructions d'accès aux CSR ----------
 
