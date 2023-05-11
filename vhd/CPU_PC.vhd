@@ -54,7 +54,19 @@ architecture RTL of CPU_PC is
         S_BGEU,
         S_SLTU,
         S_SLTI,
-        S_SLTIU
+        S_SLTIU,
+        S_LW,
+        S_LW2,
+        S_LW3,
+        S_SW,
+        S_SW2,
+        S_LB,
+        S_LB2,
+        S_LB3,
+        S_LBU,
+        S_LBU2,
+        S_LBU3,
+        S_JAL
     );
 
     signal state_d, state_q : State_type;
@@ -144,8 +156,6 @@ begin
                 state_d <= S_Decode;
 
             when S_Decode =>
-                -- On peut aussi utiliser un case, ...
-                -- et ne pas le faire juste pour les branchements et auipc
                 case status.IR(6 downto 0) is 
                     when "0110111" => -- LUI
                         cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
@@ -297,6 +307,26 @@ begin
                             when others => -- Erreur
                                 state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                         end case;
+
+                    when "0000011" => -- I
+                        case status.IR(14 downto 12) is
+                            when "000" => --lb
+                                state_d <= S_LB;
+                            when "010" => --lw
+                                state_d <= S_LW;
+                            when others => -- Erreur
+                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                        end case;  
+                        
+                    when "0100011" => -- S
+                        case status.IR(14 downto 12) is
+                            when "010" => --sw
+                                state_d <= S_SW;
+                            when others => -- Erreur
+                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                        end case;
+                    when "1101111" => --JAL
+                        state_d <= S_JAL;
                     when others => -- Erreur
                         state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                 end case;
@@ -570,6 +600,86 @@ begin
                 cmd.mem_we <= '0';
                 -- next state
                 state_d <= S_Fetch;
+
+            when S_JAL =>
+                --rd
+                cmd.PC_X_sel <= PC_X_cst_x00;
+                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_pc;
+
+                -- saut       
+                cmd.TO_PC_Y_sel <=  TO_PC_Y_immJ;
+                cmd.PC_sel <= PC_from_pc;
+                cmd.PC_we <= '1';
+
+                state_d <= S_Pre_Fetch;
+
+            when S_LW =>
+                -- AD <- rs1 + immI
+                cmd.AD_we <= '1';
+                cmd.AD_Y_sel <= AD_Y_immI;
+                state_d <= S_LW2;
+
+            when S_LW2 =>
+                -- load address to memory
+                cmd.mem_ce <= '1';
+                cmd.ADDR_sel <= ADDR_from_ad;
+                state_d <= S_LW3;
+
+            when S_LW3 =>
+                -- load word from memory
+                cmd.RF_SIZE_sel <= RF_SIZE_word;
+                cmd.RF_sign_enable <= '1';
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_mem;
+                -- lecture mem[PC]
+                cmd.ADDR_sel <= ADDR_from_pc;
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '0';
+                -- next state
+                state_d <= S_Fetch;
+
+            when S_LB =>
+                -- AD <- rs1 + immI
+                cmd.AD_we <= '1';
+                cmd.AD_Y_sel <= AD_Y_immI;
+                state_d <= S_LB2;
+
+            when S_LB2 =>
+                -- load address to memory
+                cmd.mem_ce <= '1';
+                cmd.ADDR_sel <= ADDR_from_ad;
+                state_d <= S_LB3;
+
+            when S_LB3 =>
+                -- load word from memory
+                cmd.RF_SIZE_sel <= RF_SIZE_byte;
+                cmd.RF_sign_enable <= '1';
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_mem;
+                -- lecture mem[PC]
+                cmd.ADDR_sel <= ADDR_from_pc;
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '0';
+                -- next state
+                state_d <= S_Fetch;
+                
+
+            when S_SW =>
+                -- AD <- rs1 + immS
+                cmd.AD_we <= '1';
+                cmd.AD_Y_sel <= AD_Y_immS;
+                state_d <= S_SW2;
+
+            when S_SW2 =>
+                -- write rs2 in memory to address
+                cmd.RF_SIZE_sel <= RF_SIZE_word;
+                cmd.mem_we <= '1';
+                cmd.mem_ce <= '1';
+                cmd.ADDR_sel <= ADDR_from_ad;
+                -- next state
+                state_d <= S_Pre_Fetch;   
                 
 ---------- Instructions de saut ----------
             when S_BEQ =>
