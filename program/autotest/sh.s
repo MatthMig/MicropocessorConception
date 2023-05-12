@@ -9,5 +9,5 @@
 	# max_cycle 100
 	# pout_start
     # 00FFF000
-    # 00FFF000
+    # FFFFF000
 	# pout_end

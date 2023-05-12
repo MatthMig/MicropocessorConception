@@ -755,6 +755,7 @@ begin
                         cmd.RF_we <= '1';
                         cmd.DATA_sel <= DATA_from_mem;
                         cmd.RF_sign_enable <= '0';
+                    when others =>
                 end case;
                 -- incrementation de pc
                 cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
@@ -779,6 +780,7 @@ begin
                         cmd.RF_SIZE_sel <= RF_SIZE_half;
                     when "010" =>
                         cmd.RF_SIZE_sel <= RF_SIZE_word;
+                    when others => null;
                 end case;
                 cmd.mem_we <= '1';
                 cmd.mem_ce <= '1';
