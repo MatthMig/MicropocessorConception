@@ -755,7 +755,7 @@ begin
                         cmd.RF_we <= '1';
                         cmd.DATA_sel <= DATA_from_mem;
                         cmd.RF_sign_enable <= '0';
-                    when others =>
+                    when others => null;
                 end case;
                 -- incrementation de pc
                 cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
