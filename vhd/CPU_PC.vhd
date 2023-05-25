@@ -801,18 +801,43 @@ begin
                 cmd.RF_we <= '1';
                 cmd.DATA_sel <= DATA_from_csr;
                 case status.IR(14 downto 12) is
-                    when "001" =>
+                    when "000" =>   -- mret
+                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                        cmd.PC_sel <= PC_from_mepc;
+                        cmd.PC_we <= '1';
+                        cmd.cs.MSTATUS_mie_set <= '1';
+                    when "001" =>   -- csrrw
                         -- a = csr
                         cmd.cs.CSR_write_mode <= WRITE_mode_simple;
-                    when "010" =>
+                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
+                    when "010" =>   -- csrrs
                         -- a = rs1 or csr
                         cmd.cs.CSR_write_mode <= WRITE_mode_set;
+                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
+                    when "011" =>   -- csrrc
+                        -- a = csr and (not rs1)
+                        cmd.cs.CSR_write_mode <= WRITE_mode_clear;
+                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
+                    when "101" =>   -- csrrwi
+                        -- a = 0*27 || zimm
+                        cmd.cs.CSR_write_mode <= WRITE_mode_simple;
+                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
+                    when "110" =>   -- csrrsi
+                        --a = (0*27 || zimm) or csr
+                        cmd.cs.CSR_write_mode <= WRITE_mode_set;
+                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
+                    when "111" =>   -- csrrci
+                        -- a = csr and not (0*27 || zimm)
+                        cmd.cs.CSR_write_mode <= WRITE_mode_clear;
+                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
                     when others => null;
                 end case;
                 -- csr ← a
                 case status.IR(31 downto 20) is
                     when x"300" =>
                         cmd.cs.CSR_we <= CSR_mstatus;
+                        cmd.cs.CSR_sel <= CSR_from_mstatus;
+                    when x"302" =>
                         cmd.cs.CSR_sel <= CSR_from_mstatus;
                     when x"304" =>
                         cmd.cs.CSR_we <= CSR_mie;
@@ -829,7 +854,6 @@ begin
                         cmd.cs.CSR_sel <= CSR_from_mip;
                     when others => null;
                 end case;
-                cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
                 cmd.cs.CSR_WRITE_mode <= WRITE_mode_simple;
                 -- incrementation de pc
                 cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
