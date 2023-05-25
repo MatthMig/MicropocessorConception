@@ -92,7 +92,7 @@ begin
         cmd.SHIFTER_Y_sel     <= SHIFTER_Y_rs2;
 
         cmd.RF_we             <= '0';
-        cmd.RF_SIZE_sel       <= RF_SIZE_byte;
+        cmd.RF_SIZE_sel       <= RF_SIZE_word;
         cmd.RF_SIGN_enable    <= '0';
         cmd.DATA_sel          <= DATA_from_pc;
 
@@ -732,14 +732,14 @@ begin
                 case status.IR(14 downto 12) is 
                     when "000" =>
                         cmd.RF_SIZE_sel <= RF_SIZE_byte;
+                        cmd.RF_sign_enable <= '1';
                         cmd.RF_we <= '1';
                         cmd.DATA_sel <= DATA_from_mem;
-                        cmd.RF_sign_enable <= '1';
                     when "001" =>
                         cmd.RF_SIZE_sel <= RF_SIZE_half;
+                        cmd.RF_sign_enable <= '1';
                         cmd.RF_we <= '1';
                         cmd.DATA_sel <= DATA_from_mem;
-                        cmd.RF_sign_enable <= '1';
                     when "010" =>
                         cmd.RF_SIZE_sel <= RF_SIZE_word;
                         cmd.RF_we <= '1';
@@ -773,6 +773,9 @@ begin
 
             when S_S2 =>
                 -- write rs2 in memory to address
+                cmd.mem_ce <= '1';
+                cmd.mem_we <= '1';
+                cmd.ADDR_sel <= ADDR_from_ad;
                 case status.IR(14 downto 12) is 
                     when "000" =>
                         cmd.RF_SIZE_sel <= RF_SIZE_byte;
@@ -782,9 +785,6 @@ begin
                         cmd.RF_SIZE_sel <= RF_SIZE_word;
                     when others => null;
                 end case;
-                cmd.mem_we <= '1';
-                cmd.mem_ce <= '1';
-                cmd.ADDR_sel <= ADDR_from_ad;
                 -- incrementation de pc
                 cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
                 cmd.PC_sel <= PC_from_pc;
