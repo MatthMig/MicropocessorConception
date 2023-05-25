@@ -61,7 +61,8 @@ architecture RTL of CPU_PC is
         S_S,
         S_S2,
         S_JAL,
-        S_JALR
+        S_JALR,
+        S_CSRR
     );
 
     signal state_d, state_q : State_type;
@@ -312,6 +313,8 @@ begin
                         state_d <= S_JAL;
                     when "1100111" => --JALR
                         state_d <= S_JALR;
+                    when "1110011" => --CSRR
+                        state_d <= S_CSRR;
                     when others => -- Erreur
                         state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                 end case;
@@ -793,6 +796,47 @@ begin
                 state_d <= S_Pre_Fetch;   
 
 ---------- Instructions d'accès aux CSR ----------
+            when S_CSRR =>
+                -- rd ← csr
+                cmd.RF_we <= '1';
+                cmd.DATA_sel <= DATA_from_csr;
+                case status.IR(14 downto 12) is
+                    when "001" =>
+                        -- a = csr
+                        cmd.cs.CSR_write_mode <= WRITE_mode_simple;
+                    when "010" =>
+                        -- a = rs1 or csr
+                        cmd.cs.CSR_write_mode <= WRITE_mode_set;
+                    when others => null;
+                end case;
+                -- csr ← a
+                case status.IR(31 downto 20) is
+                    when x"300" =>
+                        cmd.cs.CSR_we <= CSR_mstatus;
+                        cmd.cs.CSR_sel <= CSR_from_mstatus;
+                    when x"304" =>
+                        cmd.cs.CSR_we <= CSR_mie;
+                        cmd.cs.CSR_sel <= CSR_from_mie;
+                    when x"305" =>
+                        cmd.cs.CSR_we <= CSR_mtvec;
+                        cmd.cs.CSR_sel <= CSR_from_mtvec;
+                    when x"341" =>
+                        cmd.cs.CSR_we <= CSR_mepc;
+                        cmd.cs.CSR_sel <= CSR_from_mepc;
+                    when x"342" =>
+                        cmd.cs.CSR_sel <= CSR_from_mcause;
+                    when x"344" =>
+                        cmd.cs.CSR_sel <= CSR_from_mip;
+                    when others => null;
+                end case;
+                cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
+                cmd.cs.CSR_WRITE_mode <= WRITE_mode_simple;
+                -- incrementation de pc
+                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                cmd.PC_sel <= PC_from_pc;
+                cmd.PC_we <= '1';
+                -- next state
+                state_d <= S_Pre_Fetch;
 
             when others => null;
         end case;
