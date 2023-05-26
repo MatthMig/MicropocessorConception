@@ -1,8 +1,12 @@
 # TAG = csrrs
 	.text
 
+    addi x29, x29, 0xFFFFFFFC
+    csrrs x31, mepc, x29
+    csrrs x31, mepc, x29
+
     csrrs x0, mie, x0 
-    lui x30, 0x00001
+    lui x30, 0x00001        # 1000
     csrrs x31, mie, x30  
     addi x30, x30, 1        # 1001
     csrrs x31, mie, x30
@@ -25,13 +29,15 @@
 	# max_cycle 100
 	# pout_start
     # 00000000
+    # FFFFFFFC
+    # 00000000
     # 00001000  
     # 00000000
     # 00001002 
     # 00000000
-    # 00001003 
-    # 00000000
-    # 00001030
+    # 00001000 
+    # FFFFFFFC
+    # 00001004
     # 00000000
     # 00000000 
     # 00000080

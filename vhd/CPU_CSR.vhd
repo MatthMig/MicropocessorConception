@@ -85,7 +85,7 @@ begin
         
         mtvec_d <= mtvec_q;
         if (cmd.CSR_we=CSR_mtvec) then
-            mtvec_d <= to_csr;
+            mtvec_d <= CSR_write(to_csr, mtvec_q, cmd.CSR_WRITE_mode);
             mtvec_d(1 downto 0) <= "00";
         end if;
 
@@ -107,12 +107,12 @@ begin
 
         mepc_d <= mepc_q;
         if (cmd.CSR_we=CSR_mepc) then
-            mepc_d(1 downto 0) <= "00";
             if(cmd.MEPC_sel=MEPC_from_pc) then
-                mepc_d <= pc;
+                mepc_d <= CSR_write(pc, mepc_q, cmd.CSR_WRITE_mode);
             elsif(cmd.MEPC_sel=MEPC_from_csr) then
-                mepc_d <= to_csr;
+                mepc_d <= CSR_write(to_csr, mepc_q, cmd.CSR_WRITE_mode);
             end if;
+            mepc_d(1 downto 0) <= "00";
         end if;
 
         mip_d <= mip_q;

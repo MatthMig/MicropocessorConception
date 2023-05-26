@@ -118,7 +118,7 @@ begin
 
         cmd.cs.TO_CSR_sel        <= TO_CSR_from_imm;
         cmd.cs.CSR_sel           <= CSR_from_mcause;
-        cmd.cs.MEPC_sel          <= MEPC_from_pc;
+        cmd.cs.MEPC_sel          <= MEPC_from_csr;
 
         cmd.cs.MSTATUS_mie_set   <= '0';
         cmd.cs.MSTATUS_mie_reset <= '0';
@@ -834,23 +834,25 @@ begin
                 end case;
                 -- csr ← a
                 case status.IR(31 downto 20) is
-                    when x"300" =>
+                    when x"300" =>  -- mstatus
                         cmd.cs.CSR_we <= CSR_mstatus;
                         cmd.cs.CSR_sel <= CSR_from_mstatus;
-                    when x"302" =>
+                    when x"302" =>  -- mret
+                        cmd.cs.MEPC_sel <= MEPC_from_pc;
                         cmd.cs.CSR_sel <= CSR_from_mstatus;
-                    when x"304" =>
+                    when x"304" =>  -- mie
                         cmd.cs.CSR_we <= CSR_mie;
                         cmd.cs.CSR_sel <= CSR_from_mie;
-                    when x"305" =>
+                    when x"305" =>  -- mtvec
                         cmd.cs.CSR_we <= CSR_mtvec;
                         cmd.cs.CSR_sel <= CSR_from_mtvec;
-                    when x"341" =>
+                    when x"341" =>  -- mepc
+                        cmd.cs.MEPC_sel <= MEPC_from_csr;
                         cmd.cs.CSR_we <= CSR_mepc;
                         cmd.cs.CSR_sel <= CSR_from_mepc;
-                    when x"342" =>
+                    when x"342" =>  -- mcause
                         cmd.cs.CSR_sel <= CSR_from_mcause;
-                    when x"344" =>
+                    when x"344" =>  -- mip
                         cmd.cs.CSR_sel <= CSR_from_mip;
                     when others => null;
                 end case;
