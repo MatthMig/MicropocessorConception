@@ -856,7 +856,6 @@ begin
                         cmd.cs.CSR_sel <= CSR_from_mip;
                     when others => null;
                 end case;
-                cmd.cs.CSR_WRITE_mode <= WRITE_mode_simple;
                 -- incrementation de pc
                 cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
                 cmd.PC_sel <= PC_from_pc;
