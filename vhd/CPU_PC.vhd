@@ -152,172 +152,183 @@ begin
                 state_d <= S_Decode;
 
             when S_Decode =>
-                case status.IR(6 downto 0) is 
-                    when "0110111" => -- LUI
-                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                        cmd.PC_sel <= PC_from_pc;
-                        cmd.PC_we <= '1';
-                        state_d <= S_LUI;
 
-                    when "0010111" => -- AUIPC
-                        state_d <= S_AUIPC;
+                if status.it then
+                    cmd.cs.MEPC_sel <= MEPC_from_pc;
+                    cmd.cs.MSTATUS_mie_reset <= '1';
+                    cmd.PC_sel <= PC_mtvec; -- départ en interruption
+                    cmd.PC_we <= '1';
+                    cmd.cs.CSR_we <= CSR_mepc;
+                    state_d <= S_Pre_Fetch;
+                else
+                    case status.IR(6 downto 0) is 
+                        when "0110111" => -- LUI
+                            cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                            cmd.PC_sel <= PC_from_pc;
+                            cmd.PC_we <= '1';
+                            state_d <= S_LUI;
 
-                    when "0010011" => -- I
-                        case status.IR(14 downto 12) is 
-                            when "000" => -- ADDI
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_ADDI;
-                            when "001" => -- SLLI
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_SLLI;
-                            when "100" => -- XORI
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_XORI;
-                            when "101" => 
-                                case status.IR(31 downto 25) is 
-                                    when "0100000" => -- SRAI
+                        when "0010111" => -- AUIPC
+                            state_d <= S_AUIPC;
+
+                        when "0010011" => -- I
+                                case status.IR(14 downto 12) is
+                                    when "000" => -- ADDI
                                         cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
                                         cmd.PC_sel <= PC_from_pc;
                                         cmd.PC_we <= '1';
-                                        state_d <= S_SRAI;
-                                    when "0000000" => -- SRLI
+                                        state_d <= S_ADDI;
+                                    when "001" => -- SLLI
                                         cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
                                         cmd.PC_sel <= PC_from_pc;
                                         cmd.PC_we <= '1';
-                                        state_d <= S_SRLI;
+                                        state_d <= S_SLLI;
+                                    when "100" => -- XORI
+                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                        cmd.PC_sel <= PC_from_pc;
+                                        cmd.PC_we <= '1';
+                                        state_d <= S_XORI;
+                                    when "101" => 
+                                        case status.IR(31 downto 25) is 
+                                            when "0100000" => -- SRAI
+                                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                                cmd.PC_sel <= PC_from_pc;
+                                                cmd.PC_we <= '1';
+                                                state_d <= S_SRAI;
+                                            when "0000000" => -- SRLI
+                                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                                cmd.PC_sel <= PC_from_pc;
+                                                cmd.PC_we <= '1';
+                                                state_d <= S_SRLI;
+                                            when others => -- Erreur
+                                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                                        end case;
+                                    when "110" => -- ORI
+                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                        cmd.PC_sel <= PC_from_pc;
+                                        cmd.PC_we <= '1';
+                                        state_d <= S_ORI;
+                                    when "111" => -- ANDI
+                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                        cmd.PC_sel <= PC_from_pc;
+                                        cmd.PC_we <= '1';
+                                        state_d <= S_ANDI;
+                                                            
+                                    when "010" => -- SLTI
+                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                        cmd.PC_sel <= PC_from_pc;
+                                        cmd.PC_we <= '1';
+                                        state_d <= S_SLTI;
+                                                            
+                                    when "011" => -- SLTIU
+                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                        cmd.PC_sel <= PC_from_pc;
+                                        cmd.PC_we <= '1';
+                                        state_d <= S_SLTIU;
                                     when others => -- Erreur
                                         state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
                                 end case;
-                            when "110" => -- ORI
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_ORI;
-                            when "111" => -- ANDI
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_ANDI;
-                                                     
-                            when "010" => -- SLTI
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_SLTI;
-                                                     
-                            when "011" => -- SLTIU
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_SLTIU;
-                            when others => -- Erreur
-                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                        end case;
 
-                    when "0110011" => -- R
-                        case status.IR(14 downto 12) is 
-                            when "000" => -- ADD and SUB
-                                case status.IR(31 downto 25)is
-                                    when "0000000"=> --ADD
-                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                        cmd.PC_sel <= PC_from_pc;
-                                        cmd.PC_we <= '1';
-                                        state_d <= S_ADD;
-                                    when "0100000" => -- SUB
-                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                        cmd.PC_sel <= PC_from_pc;
-                                        cmd.PC_we <= '1';
-                                        state_d <= S_SUB;
-                                    when others => -- Erreur
-                                        state_d <= S_Error;
-                                end case;
-                            when "001" => -- SLL
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_SLL;
-                            when "010" => -- SLT
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_SLT;
-                            when "011" => -- SLTU
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_SLTU;   
-                            when "100" => --XOR
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_XOR;
-                            when "101" => 
-                                case status.IR(31 downto 25) is 
-                                    when "0000000" => -- SRL
-                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                        cmd.PC_sel <= PC_from_pc;
-                                        cmd.PC_we <= '1';
-                                        state_d <= S_SRL;
-                                    when "0100000" => -- SRA
-                                        cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                        cmd.PC_sel <= PC_from_pc;
-                                        cmd.PC_we <= '1';
-                                        state_d <= S_SRA;
-                                    when others => -- Erreur
-                                        state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                                end case;
-                            when "110" => --OR
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_OR;
-                            when "111" => --AND
-                                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                                cmd.PC_sel <= PC_from_pc;
-                                cmd.PC_we <= '1';
-                                state_d <= S_AND;
-                            when others => -- Erreur
-                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                        end case;
-                    
-                    when "1100011" => --B
-                        case status.IR(14 downto 12) is
-                            when "000" => --beq
-                                state_d <= S_BEQ;
-                            when "001" => --bne
-                                state_d <= S_BNE;                            
-                            when "100" => --blt
-                                state_d <= S_BLT;
-                            when "101" => --bge
-                                state_d <= S_BGE;
-                            when "110" => --bltu
-                                state_d <= S_BLTU;
-                            when "111" => --bgeu
-                                state_d <= S_BGEU;
-                            when others => -- Erreur
-                                state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                        end case;
-
-                    when "0000011" => -- I
-                        state_d <= S_L;
+                        when "0110011" => -- R
+                            case status.IR(14 downto 12) is 
+                                when "000" => -- ADD and SUB
+                                    case status.IR(31 downto 25)is
+                                        when "0000000"=> --ADD
+                                            cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                            cmd.PC_sel <= PC_from_pc;
+                                            cmd.PC_we <= '1';
+                                            state_d <= S_ADD;
+                                        when "0100000" => -- SUB
+                                            cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                            cmd.PC_sel <= PC_from_pc;
+                                            cmd.PC_we <= '1';
+                                            state_d <= S_SUB;
+                                        when others => -- Erreur
+                                            state_d <= S_Error;
+                                    end case;
+                                when "001" => -- SLL
+                                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                    cmd.PC_sel <= PC_from_pc;
+                                    cmd.PC_we <= '1';
+                                    state_d <= S_SLL;
+                                when "010" => -- SLT
+                                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                    cmd.PC_sel <= PC_from_pc;
+                                    cmd.PC_we <= '1';
+                                    state_d <= S_SLT;
+                                when "011" => -- SLTU
+                                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                    cmd.PC_sel <= PC_from_pc;
+                                    cmd.PC_we <= '1';
+                                    state_d <= S_SLTU;   
+                                when "100" => --XOR
+                                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                    cmd.PC_sel <= PC_from_pc;
+                                    cmd.PC_we <= '1';
+                                    state_d <= S_XOR;
+                                when "101" => 
+                                    case status.IR(31 downto 25) is 
+                                        when "0000000" => -- SRL
+                                            cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                            cmd.PC_sel <= PC_from_pc;
+                                            cmd.PC_we <= '1';
+                                            state_d <= S_SRL;
+                                        when "0100000" => -- SRA
+                                            cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                            cmd.PC_sel <= PC_from_pc;
+                                            cmd.PC_we <= '1';
+                                            state_d <= S_SRA;
+                                        when others => -- Erreur
+                                            state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                                    end case;
+                                when "110" => --OR
+                                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                    cmd.PC_sel <= PC_from_pc;
+                                    cmd.PC_we <= '1';
+                                    state_d <= S_OR;
+                                when "111" => --AND
+                                    cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                                    cmd.PC_sel <= PC_from_pc;
+                                    cmd.PC_we <= '1';
+                                    state_d <= S_AND;
+                                when others => -- Erreur
+                                    state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                            end case;
                         
-                    when "0100011" => -- S
-                        state_d <= S_S;
-                    when "1101111" => --JAL
-                        state_d <= S_JAL;
-                    when "1100111" => --JALR
-                        state_d <= S_JALR;
-                    when "1110011" => --CSRR
-                        state_d <= S_CSRR;
-                    when others => -- Erreur
-                        state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
-                end case;
+                        when "1100011" => --B
+                            case status.IR(14 downto 12) is
+                                when "000" => --beq
+                                    state_d <= S_BEQ;
+                                when "001" => --bne
+                                    state_d <= S_BNE;                            
+                                when "100" => --blt
+                                    state_d <= S_BLT;
+                                when "101" => --bge
+                                    state_d <= S_BGE;
+                                when "110" => --bltu
+                                    state_d <= S_BLTU;
+                                when "111" => --bgeu
+                                    state_d <= S_BGEU;
+                                when others => -- Erreur
+                                    state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                            end case;
+
+                        when "0000011" => -- I
+                            state_d <= S_L;
+                            
+                        when "0100011" => -- S
+                            state_d <= S_S;
+                        when "1101111" => --JAL
+                            state_d <= S_JAL;
+                        when "1100111" => --JALR
+                            state_d <= S_JALR;
+                        when "1110011" => --CSRR
+                            state_d <= S_CSRR;
+                        when others => -- Erreur
+                            state_d <= S_Error; -- Pour d ́etecter les rat ́es du d ́ecodage
+                    end case;
+                end if;
+
 ---------- Instructions avec immediat de type U ----------
             when S_LUI =>
                 -- rd <- ImmU + 0
@@ -800,67 +811,104 @@ begin
                 -- rd ← csr
                 cmd.RF_we <= '1';
                 cmd.DATA_sel <= DATA_from_csr;
-                case status.IR(14 downto 12) is
-                    when "000" =>   -- mret
+
+                if status.IR(14 downto 12) = "000" then
+                    cmd.PC_sel <= PC_from_mepc;
+                    cmd.PC_we <= '1';
+                    cmd.cs.MSTATUS_mie_set <= '1';
+                else
+                    case status.IR(14 downto 12) is
+                        -- when "000" =>   -- mret
+                        --     cmd.PC_sel <= PC_from_mepc;
+                        --     cmd.PC_we <= '1';
+                        --     cmd.cs.MSTATUS_mie_set <= '1';
+                        when "001" =>   -- csrrw
+                            -- a = csr
+                            cmd.cs.CSR_write_mode <= WRITE_mode_simple;
+                            cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
+                        when "010" =>   -- csrrs
+                            -- a = rs1 or csr
+                            cmd.cs.CSR_write_mode <= WRITE_mode_set;
+                            cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
+                        when "011" =>   -- csrrc
+                            -- a = csr and (not rs1)
+                            cmd.cs.CSR_write_mode <= WRITE_mode_clear;
+                            cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
+                        when "101" =>   -- csrrwi
+                            -- a = 0*27 || zimm
+                            cmd.cs.CSR_write_mode <= WRITE_mode_simple;
+                            cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
+                        when "110" =>   -- csrrsi
+                            --a = (0*27 || zimm) or csr
+                            cmd.cs.CSR_write_mode <= WRITE_mode_set;
+                            cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
+                        when "111" =>   -- csrrci
+                            -- a = csr and not (0*27 || zimm)
+                            cmd.cs.CSR_write_mode <= WRITE_mode_clear;
+                            cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
+                        when others => null;
+                    end case;
+                    -- csr ← a
+                    case status.IR(31 downto 20) is
+                        when x"300" =>  -- mstatus
+                            cmd.cs.CSR_we <= CSR_mstatus;
+                            cmd.cs.CSR_sel <= CSR_from_mstatus;
+                        when x"302" =>  -- mepc
+                            cmd.cs.MEPC_sel <= MEPC_from_pc;
+                            cmd.cs.CSR_sel <= CSR_from_mstatus;
+                        when x"304" =>  -- mie
+                            cmd.cs.CSR_we <= CSR_mie;
+                            cmd.cs.CSR_sel <= CSR_from_mie;
+                        when x"305" =>  -- mtvec
+                            cmd.cs.CSR_we <= CSR_mtvec;
+                            cmd.cs.CSR_sel <= CSR_from_mtvec;
+                        when x"341" =>  -- mepc
+                            cmd.cs.MEPC_sel <= MEPC_from_csr;
+                            cmd.cs.CSR_we <= CSR_mepc;
+                            cmd.cs.CSR_sel <= CSR_from_mepc;
+                        when x"342" =>  -- mcause
+                            cmd.cs.CSR_sel <= CSR_from_mcause;
+                        when x"344" =>  -- mip
+                            cmd.cs.CSR_sel <= CSR_from_mip;
+                        when others => null;
+                    end case;
+                        -- incrementation de pc
                         cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                        cmd.PC_sel <= PC_from_mepc;
+                        cmd.PC_sel <= PC_from_pc;
                         cmd.PC_we <= '1';
-                        cmd.cs.MSTATUS_mie_set <= '1';
-                    when "001" =>   -- csrrw
-                        -- a = csr
-                        cmd.cs.CSR_write_mode <= WRITE_mode_simple;
-                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
-                    when "010" =>   -- csrrs
-                        -- a = rs1 or csr
-                        cmd.cs.CSR_write_mode <= WRITE_mode_set;
-                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
-                    when "011" =>   -- csrrc
-                        -- a = csr and (not rs1)
-                        cmd.cs.CSR_write_mode <= WRITE_mode_clear;
-                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_rs1;
-                    when "101" =>   -- csrrwi
-                        -- a = 0*27 || zimm
-                        cmd.cs.CSR_write_mode <= WRITE_mode_simple;
-                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
-                    when "110" =>   -- csrrsi
-                        --a = (0*27 || zimm) or csr
-                        cmd.cs.CSR_write_mode <= WRITE_mode_set;
-                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
-                    when "111" =>   -- csrrci
-                        -- a = csr and not (0*27 || zimm)
-                        cmd.cs.CSR_write_mode <= WRITE_mode_clear;
-                        cmd.cs.TO_CSR_Sel <= TO_CSR_from_imm;
-                    when others => null;
-                end case;
-                -- csr ← a
-                case status.IR(31 downto 20) is
-                    when x"300" =>  -- mstatus
-                        cmd.cs.CSR_we <= CSR_mstatus;
-                        cmd.cs.CSR_sel <= CSR_from_mstatus;
-                    when x"302" =>  -- mret
-                        cmd.cs.MEPC_sel <= MEPC_from_pc;
-                        cmd.cs.CSR_sel <= CSR_from_mstatus;
-                    when x"304" =>  -- mie
-                        cmd.cs.CSR_we <= CSR_mie;
-                        cmd.cs.CSR_sel <= CSR_from_mie;
-                    when x"305" =>  -- mtvec
-                        cmd.cs.CSR_we <= CSR_mtvec;
-                        cmd.cs.CSR_sel <= CSR_from_mtvec;
-                    when x"341" =>  -- mepc
-                        cmd.cs.MEPC_sel <= MEPC_from_csr;
-                        cmd.cs.CSR_we <= CSR_mepc;
-                        cmd.cs.CSR_sel <= CSR_from_mepc;
-                    when x"342" =>  -- mcause
-                        cmd.cs.CSR_sel <= CSR_from_mcause;
-                    when x"344" =>  -- mip
-                        cmd.cs.CSR_sel <= CSR_from_mip;
-                    when others => null;
-                end case;
-                -- incrementation de pc
-                cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
-                cmd.PC_sel <= PC_from_pc;
-                cmd.PC_we <= '1';
-                -- next state
+                        -- next state
+                end if;
+                
+                -- -- csr ← a
+                -- case status.IR(31 downto 20) is
+                --     when x"300" =>  -- mstatus
+                --         cmd.cs.CSR_we <= CSR_mstatus;
+                --         cmd.cs.CSR_sel <= CSR_from_mstatus;
+                --     when x"302" =>  -- mepc
+                --         cmd.cs.MEPC_sel <= MEPC_from_pc;
+                --         cmd.cs.CSR_sel <= CSR_from_mstatus;
+                --     when x"304" =>  -- mie
+                --         cmd.cs.CSR_we <= CSR_mie;
+                --         cmd.cs.CSR_sel <= CSR_from_mie;
+                --     when x"305" =>  -- mtvec
+                --         cmd.cs.CSR_we <= CSR_mtvec;
+                --         cmd.cs.CSR_sel <= CSR_from_mtvec;
+                --     when x"341" =>  -- mepc
+                --         cmd.cs.MEPC_sel <= MEPC_from_csr;
+                --         cmd.cs.CSR_we <= CSR_mepc;
+                --         cmd.cs.CSR_sel <= CSR_from_mepc;
+                --     when x"342" =>  -- mcause
+                --         cmd.cs.CSR_sel <= CSR_from_mcause;
+                --     when x"344" =>  -- mip
+                --         cmd.cs.CSR_sel <= CSR_from_mip;
+                --     when others => null;
+                -- end case;
+                --     -- incrementation de pc
+                --     cmd.TO_PC_Y_sel <= TO_PC_Y_cst_x04;
+                --     cmd.PC_sel <= PC_from_pc;
+                --     cmd.PC_we <= '1';
+                --     -- next state
+                    
                 state_d <= S_Pre_Fetch;
 
             when others => null;
